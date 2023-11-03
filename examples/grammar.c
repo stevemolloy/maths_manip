@@ -23,12 +23,14 @@ typedef struct {
   struct Expr *body;
 } Func;
 
+// A "named expression" has a name and args, where args is one or more expressions
+// This is supposed to allow representation of, e.g., "pair(a, b)"
 typedef struct {
   char* name;
   struct Expr *args;
 } NamedExpr;
 
-// An expression is a symbol or a function;
+// An expression is a symbol, an expression, a named expression, or a function.
 typedef struct Expr {
   ExprType type;
   union {
