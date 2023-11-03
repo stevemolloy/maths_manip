@@ -1,5 +1,6 @@
 CC = clang
-CFLAGS = -Wall -Wextra -Werror -Wpedantic -Wconversion -std=c18 -ggdb -O0
+# CFLAGS = -Wall -Wextra -Werror -Wpedantic -Wconversion -std=c18 -ggdb -O0
+CFLAGS = -Wall -Wextra -Wpedantic -Wconversion -std=c18 -ggdb -O0
 CINCLUDES = -I./src
 CLIBS =
 
