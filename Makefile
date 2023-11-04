@@ -6,28 +6,21 @@ CLIBS =
 
 SRC = src
 OBJ = obj
-EXAMPLES = examples
 BINDIR = bin
 
-# List of example source files
-EXAMPLE_SRCS = $(wildcard $(EXAMPLES)/*.c)
-EXAMPLE_BINS = $(patsubst $(EXAMPLES)/%.c, $(BINDIR)/%, $(EXAMPLE_SRCS))
+EXE = $(BINDIR)/math_gym
 
 # List of object files from the src directory
-MAIN_SRCS = $(wildcard $(SRC)/*.c)
-MAIN_OBJS = $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(MAIN_SRCS))
+SRCS = $(wildcard $(SRC)/*.c)
+OBJS = $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(SRCS))
 
-all: $(EXAMPLE_BINS)
+all: $(EXE)
 
-$(BINDIR)/%: $(EXAMPLES)/%.c $(MAIN_OBJS)
+$(EXE): $(OBJS)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(CINCLUDES) $^ -o $@ $(CLIBS)
 
 $(OBJ)/%.o: $(SRC)/%.c
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) $(CINCLUDES) -c $< -o $@
-
-$(OBJ)/%.o: $(EXAMPLES)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) $(CINCLUDES) -c $< -o $@
 
