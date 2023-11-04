@@ -198,27 +198,26 @@ int get_sym_equivalent(Sym sym, Expr f_head, Expr base_expr, Expr *equiv) {
   return 0;
 }
 
-// Expr execute_functor(Expr target, Func functor, SymMap sym_dict) { }
-
-// Expr execute_functor(Expr f_head, Expr f_body, Expr target) {
-//   if (f_head.type == SYM) {
-//     Expr result = {0};
-//     get_sym_equivalent(*f_head.as.sym, f_body, target, &result);
-//     return result;
-//   } else if (f_head.type == FUNC) {
-//     assert(0 && "Isn't this illegal?");
-//   } else if (f_head.type == NAMED_EXPR) {
-//     for (size_t i=0; i<target.as.named_expr->num_args; i++) {
-//       target.as.named_expr->args[i] = execute_functor(
-//           f_head.as.named_expr->args[i],
-//           f_body.as.named_expr->args[i],
-//           target.as.named_expr->args[i]
-//       );
-//     }
-//     return target;
-//   }
-//   assert(0 && "Unreachable");
-// }
+Expr execute_functor(Expr target, Expr f_head, Expr f_body, SymMap sym_map) {
+  if (f_head.type == SYM) {
+    Expr return_value = {0};
+    search_sym_map(sym_map, *f_head.as.sym, &return_value);
+    return return_value;
+  } else if (f_head.type == FUNC) {
+    assert(0 && "Isn't this illegal?");
+  } else if (f_head.type == NAMED_EXPR) {
+    for (size_t i=0; i<target.as.named_expr->num_args; i++) {
+      target.as.named_expr->args[i] = execute_functor(
+          f_head.as.named_expr->args[i],
+          f_body.as.named_expr->args[i],
+          target.as.named_expr->args[i],
+          sym_map
+      );
+    }
+    return target;
+  }
+  assert(0 && "Unreachable");
+}
 
 int main(void) {
   Sym a = "a", b = "b";
@@ -239,16 +238,16 @@ int main(void) {
   swapped_pair_expr.args[0] = (Expr){.type=SYM, .as.sym=&b};
   swapped_pair_expr.args[1] = (Expr){.type=SYM, .as.sym=&a};
 
-  Func swap = {
+  Func swap_functor = {
     .name = "swap",
     .head = calloc(1, sizeof(Expr)),
     .body = calloc(1, sizeof(Expr)),
   };
-  swap.head[0] = (Expr){
+  swap_functor.head[0] = (Expr){
     .type = NAMED_EXPR,
     .as.named_expr = &pair_expr,
   };
-  swap.body[0] = (Expr){
+  swap_functor.body[0] = (Expr){
     .type = NAMED_EXPR,
     .as.named_expr = &swapped_pair_expr,
   };
@@ -267,11 +266,13 @@ int main(void) {
   print_expr(input_expr);
 
   printf("Functor: ");
-  print_expr(wrap_in_expr(&swap));
+  print_expr(wrap_in_expr(&swap_functor));
 
   SymMap sym_map = new_sym_map(16);
-  if (match_exprs(input_expr, wrap_in_expr(&swap), &sym_map)) {
-    printf("They matched!\n");
+  if (match_exprs(input_expr, wrap_in_expr(&swap_functor), &sym_map)) {
+    printf("Result of applying functor to input: ");
+    Expr result = execute_functor(input_expr, *swap_functor.head, *swap_functor.body, sym_map);
+    print_expr(result);
   } else {
     printf("No match\n");
   }
