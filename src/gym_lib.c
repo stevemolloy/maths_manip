@@ -24,7 +24,7 @@ int add_sym_to_map(Sym sym, Expr expr, SymMap *map) {
 
 int search_sym_map(SymMap map, Sym needle, Expr *return_expr) {
   for (size_t i=0; i<map.len; i++) {
-    if (map.map[i].sym == needle) {
+    if (strcmp(map.map[i].sym, needle) == 0) {
       *return_expr = map.map[i].expr;
       return 1;
     }
