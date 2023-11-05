@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "gym_lib.h"
 
 SymMap new_sym_map(size_t ini_cap) {
@@ -111,7 +113,7 @@ bool match_exprs(Expr test_expr, Expr main_expr, SymMap *sym_map) {
     printf("\t\tMatching the test_expr against a NAMED_EXPR\n");
 #endif
     if (test_expr.type != NAMED_EXPR) return false;
-    if (test_expr.as.named_expr.name != main_expr.as.named_expr.name) return false;
+    if (strcmp(test_expr.as.named_expr.name, main_expr.as.named_expr.name) != 0) return false;
     if (test_expr.as.named_expr.num_args != main_expr.as.named_expr.num_args) return false;
     for (size_t i=0; i<test_expr.as.named_expr.num_args; i++) {
       if (!match_exprs(test_expr.as.named_expr.args[i], main_expr.as.named_expr.args[i], sym_map))

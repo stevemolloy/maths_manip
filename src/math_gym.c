@@ -112,22 +112,78 @@ TokenList parse_input_string(char *input_string) {
   return token_list;
 }
 
-int main(void) {
-  char *pair_expr_str = "pair(a, b)";
+typedef struct AST AST; // Forward reference
 
-  TokenList token_list = parse_input_string(pair_expr_str);
+// struct AST {
+//   enum {
+//     AST_SYMBOL,
+//     AST_NAMED_EXPR,
+//   } tag;
+//   union {
+//     struct AST_SYMBOL { Sym sym; } AST_SYMBOL;
+//     struct AST_NAMED_EXPR { AST *ast_list; } AST_NAMED_EXPR;
+//   } as;
+// };
+//
+// AST *ast_new(AST ast) {
+//   AST *ptr = malloc(sizeof(AST));
+//   if (ptr) *ptr = ast;
+//   return ptr;
+// }
+//
+// AST tokenlist_to_ast(TokenList token_list, size_t cursor) {
+//   switch (token_list.tokens[cursor].type) {
+//     case WORD:
+//       if (cursor == token_list.len-1 || token_list.tokens[cursor].type != LEFTPAREN) {
+//         return (AST) {
+//           .tag = AST_SYMBOL,
+//           .as.AST_SYMBOL = (Sym)token_list.tokens[cursor].contents,
+//         };
+//       } else {
+//         return (AST) [
+//           .tag = AST_NAMED_EXPR,
+//           .as.AST_NAMED_EXPR = 
+//         ]
+//       }
+//   }
+// }
 
-  for (size_t i=0; i<token_list.len; i++) {
-    printf(
-        "%zu: (%s) %s\n",
-        i,
-        tokentype_to_cstring(token_list.tokens[i].type),
-        token_list.tokens[i].contents
-      );
+Expr token_list_to_expr(TokenList tokens, size_t i) {
+  assert(i < tokens.len);
+  Token tok = tokens.tokens[i];
+  if (tok.type==WORD && (i == tokens.len-1 || tokens.tokens[i+1].type != LEFTPAREN)) {
+    return wrap_in_expr(tok.contents);
+  } else if (tok.type==WORD) {
+    char *name = tok.contents;
+    i += 2;
+    size_t startpt = i;
+    tok = tokens.tokens[i];
+    size_t arg_count = 0;
+    while (tok.type != RIGHTPAREN) {
+      if (tok.type == WORD) arg_count++;
+      tok = tokens.tokens[++i];
+    }
+    NamedExpr ne = (NamedExpr) {
+      .name = name,
+      .args = calloc(arg_count, sizeof(Expr)),
+      .num_args = arg_count,
+    };
+    i = startpt;
+    tok = tokens.tokens[i];
+    arg_count = 0;
+    while (tok.type != RIGHTPAREN) {
+      if (tok.type == WORD) {
+        ne.args[arg_count] = token_list_to_expr(tokens, i);
+        arg_count++;
+      }
+      tok = tokens.tokens[++i];
+    }
+    return wrap_in_expr(ne);
   }
+  assert(0 && "Unreachable");
+}
 
-  return 1;
-
+int main(void) {
   NamedExpr pair_expr = {
     .name = "pair",
     .args = calloc(2, sizeof(Expr)),
@@ -158,31 +214,10 @@ int main(void) {
     .as.named_expr = swapped_pair_expr,
   };
 
-  NamedExpr first_ele = {
-    .name = "f",
-    .args = calloc(3, sizeof(Expr)),
-    .num_args = 3
-  };
-  first_ele.args[0] = (Expr){.type=SYM, .as.sym="j"};
-  first_ele.args[1] = (Expr){.type=SYM, .as.sym="k"};
-  first_ele.args[2] = (Expr){.type=SYM, .as.sym="l"};
+  char *pair_expr_str = "pair(x, y)";
+  TokenList token_list = parse_input_string(pair_expr_str);
+  Expr input_expr = token_list_to_expr(token_list, 0);
 
-  NamedExpr second_ele = {
-    .name = "g",
-    .args = calloc(1, sizeof(Expr)),
-    .num_args = 1
-  };
-  second_ele.args[0] = (Expr){.type=SYM, .as.sym="w"};
-
-  NamedExpr input = {
-    .name = "pair",
-    .args = calloc(2, sizeof(Expr)),
-    .num_args = 2,
-  };
-  input.args[0] = (Expr){.type=NAMED_EXPR, .as.named_expr=first_ele};
-  input.args[1] = (Expr){.type=NAMED_EXPR, .as.named_expr=second_ele};
-
-  Expr input_expr = wrap_in_expr(input);
   printf("Input to manipulate:    ");
   print_expr(input_expr);
 
@@ -200,7 +235,6 @@ int main(void) {
   }
 
   free_sym_map(&sym_map);
-  free(input.args);
   free(pair_expr.args);
   free(swapped_pair_expr.args);
   free(swap_functor.head);
