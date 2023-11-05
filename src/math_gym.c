@@ -79,6 +79,13 @@ int add_to_token_list(TokenList *tl, Token token) {
   return 1;
 }
 
+void free_tokenlist(TokenList *token_list) {
+  for (size_t i=0; i<token_list->len; i++) {
+    free(token_list->tokens[i].contents);
+  }
+  free(token_list->tokens);
+}
+
 TokenList parse_input_string(char *input_string) {
   TokenList token_list = new_token_list(32);
   char *cursor = input_string;
@@ -112,8 +119,8 @@ TokenList parse_input_string(char *input_string) {
   return token_list;
 }
 
-typedef struct AST AST; // Forward reference
-
+// typedef struct AST AST; // Forward reference
+//
 // struct AST {
 //   enum {
 //     AST_SYMBOL,
@@ -152,9 +159,12 @@ Expr token_list_to_expr(TokenList tokens, size_t i) {
   assert(i < tokens.len);
   Token tok = tokens.tokens[i];
   if (tok.type==WORD && (i == tokens.len-1 || tokens.tokens[i+1].type != LEFTPAREN)) {
-    return wrap_in_expr(tok.contents);
+    Sym new_sym = calloc(strlen(tok.contents)+1, sizeof(char));
+    memcpy(new_sym, tok.contents, strlen(tok.contents)+1);
+    return wrap_in_expr(new_sym);
   } else if (tok.type==WORD) {
-    char *name = tok.contents;
+    char *name = calloc(strlen(tok.contents)+1, sizeof(char));
+    memcpy(name, tok.contents, strlen(tok.contents)+1);
     i += 2;
     size_t startpt = i;
     tok = tokens.tokens[i];
@@ -183,40 +193,23 @@ Expr token_list_to_expr(TokenList tokens, size_t i) {
   assert(0 && "Unreachable");
 }
 
+Expr parse_cstring_to_expr(char *input_string) {
+  TokenList token_list = parse_input_string(input_string);
+  Expr result = token_list_to_expr(token_list, 0);
+  free_tokenlist(&token_list);
+  return result;
+}
+
 int main(void) {
-  NamedExpr pair_expr = {
-    .name = "pair",
-    .args = calloc(2, sizeof(Expr)),
-    .num_args = 2,
-  };
-  pair_expr.args[0] = (Expr){.type=SYM, .as.sym="a"};
-  pair_expr.args[1] = (Expr){.type=SYM, .as.sym="b"};
-
-  NamedExpr swapped_pair_expr = {
-    .name = "pair",
-    .args = calloc(2, sizeof(Expr)),
-    .num_args = 2,
-  };
-  swapped_pair_expr.args[0] = (Expr){.type=SYM, .as.sym="b"};
-  swapped_pair_expr.args[1] = (Expr){.type=SYM, .as.sym="a"};
-
   Func swap_functor = {
     .name = "swap",
     .head = calloc(1, sizeof(Expr)),
     .body = calloc(1, sizeof(Expr)),
   };
-  swap_functor.head[0] = (Expr){
-    .type = NAMED_EXPR,
-    .as.named_expr = pair_expr,
-  };
-  swap_functor.body[0] = (Expr){
-    .type = NAMED_EXPR,
-    .as.named_expr = swapped_pair_expr,
-  };
+  swap_functor.head[0] = parse_cstring_to_expr("pair(a, b)");
+  swap_functor.body[0] = parse_cstring_to_expr("pair(b, a)");
 
-  char *pair_expr_str = "pair(x, y)";
-  TokenList token_list = parse_input_string(pair_expr_str);
-  Expr input_expr = token_list_to_expr(token_list, 0);
+  Expr input_expr = parse_cstring_to_expr("pair(x, y)");
 
   printf("Input to manipulate:    ");
   print_expr(input_expr);
@@ -235,10 +228,25 @@ int main(void) {
   }
 
   free_sym_map(&sym_map);
-  free(pair_expr.args);
-  free(swapped_pair_expr.args);
+
+  for (size_t i=0; i<swap_functor.head->as.named_expr.num_args; i++) {
+    free(swap_functor.head->as.named_expr.args[i].as.sym);
+  }
+  free(swap_functor.head->as.named_expr.args);
+  free(swap_functor.head->as.named_expr.name);
   free(swap_functor.head);
+  for (size_t i=0; i<swap_functor.body->as.named_expr.num_args; i++) {
+    free(swap_functor.body->as.named_expr.args[i].as.sym);
+  }
+  free(swap_functor.body->as.named_expr.args);
+  free(swap_functor.body->as.named_expr.name);
   free(swap_functor.body);
+
+  for (size_t i=0; i<input_expr.as.named_expr.num_args; i++) {
+    free(input_expr.as.named_expr.args[i].as.sym);
+  }
+  free(input_expr.as.named_expr.args);
+  free(input_expr.as.named_expr.name);
 
   return 0;
 }
