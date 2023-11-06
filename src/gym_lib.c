@@ -2,6 +2,13 @@
 
 #include "gym_lib.h"
 
+Sym make_sym(char *name) {
+  size_t len = strlen(name) + 1;
+  Sym result = calloc(len, sizeof(char));
+  memcpy(result, name, len);
+  return result;
+}
+
 SymMap new_sym_map(size_t ini_cap) {
   SymMap result = {0};
   result.cap = ini_cap;

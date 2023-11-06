@@ -111,6 +111,9 @@ TokenList parse_input_string(char *input_string) {
       tok = new_token(RIGHTPAREN, cursor, 1);
     } else if (*cursor == ',') {
       tok = new_token(COMMA, cursor, 2);
+    } else if (*cursor == '=' && *(cursor+1)!='\0' && *(cursor+1)=='>') {
+      tok = new_token(FUNCTOR_EQ, "=>", 2);
+      cursor++;
     }
     add_to_token_list(&token_list, tok);
     cursor++;
@@ -119,88 +122,173 @@ TokenList parse_input_string(char *input_string) {
   return token_list;
 }
 
-// typedef struct AST AST; // Forward reference
-//
-// struct AST {
-//   enum {
-//     AST_SYMBOL,
-//     AST_NAMED_EXPR,
-//   } tag;
-//   union {
-//     struct AST_SYMBOL { Sym sym; } AST_SYMBOL;
-//     struct AST_NAMED_EXPR { AST *ast_list; } AST_NAMED_EXPR;
-//   } as;
-// };
-//
-// AST *ast_new(AST ast) {
-//   AST *ptr = malloc(sizeof(AST));
-//   if (ptr) *ptr = ast;
-//   return ptr;
-// }
-//
-// AST tokenlist_to_ast(TokenList token_list, size_t cursor) {
-//   switch (token_list.tokens[cursor].type) {
-//     case WORD:
-//       if (cursor == token_list.len-1 || token_list.tokens[cursor].type != LEFTPAREN) {
-//         return (AST) {
-//           .tag = AST_SYMBOL,
-//           .as.AST_SYMBOL = (Sym)token_list.tokens[cursor].contents,
-//         };
-//       } else {
-//         return (AST) [
-//           .tag = AST_NAMED_EXPR,
-//           .as.AST_NAMED_EXPR = 
-//         ]
+// Expr token_list_to_expr(TokenList tokens, size_t i) {
+//   assert(i < tokens.len);
+//   Token tok = tokens.tokens[i];
+//   if (tok.type==WORD && (i == tokens.len-1 || tokens.tokens[i+1].type != LEFTPAREN)) {
+//     Sym new_sym = calloc(strlen(tok.contents)+1, sizeof(char));
+//     memcpy(new_sym, tok.contents, strlen(tok.contents)+1);
+//     return wrap_in_expr(new_sym);
+//   } else if (tok.type==WORD) {
+//     char *name = calloc(strlen(tok.contents)+1, sizeof(char));
+//     memcpy(name, tok.contents, strlen(tok.contents)+1);
+//     i += 2;
+//     size_t startpt = i;
+//     tok = tokens.tokens[i];
+//     size_t arg_count = 0;
+//     while (tok.type != RIGHTPAREN) {
+//       if (tok.type == WORD) arg_count++;
+//       tok = tokens.tokens[++i];
+//     }
+//     NamedExpr ne = (NamedExpr) {
+//       .name = name,
+//       .args = calloc(arg_count, sizeof(Expr)),
+//       .num_args = arg_count,
+//     };
+//     i = startpt;
+//     tok = tokens.tokens[i];
+//     arg_count = 0;
+//     while (tok.type != RIGHTPAREN) {
+//       if (tok.type == WORD) {
+//         ne.args[arg_count] = token_list_to_expr(tokens, i);
+//         arg_count++;
 //       }
+//       tok = tokens.tokens[++i];
+//     }
+//     if (i == tokens.len - 1)
+//       return wrap_in_expr(ne);
+//     
+//     i++;
+//     assert(tokens.tokens[i].type == FUNCTOR_EQ && 
+//         "Did not find \"=>\" in the expected place");
+//
+//     i++;
+//     Expr rhs = token_list_to_expr(tokens, i);
+//     print_expr(rhs);
 //   }
+//   assert(0 && "Unreachable");
 // }
 
-Expr token_list_to_expr(TokenList tokens, size_t i) {
-  assert(i < tokens.len);
-  Token tok = tokens.tokens[i];
-  if (tok.type==WORD && (i == tokens.len-1 || tokens.tokens[i+1].type != LEFTPAREN)) {
-    Sym new_sym = calloc(strlen(tok.contents)+1, sizeof(char));
-    memcpy(new_sym, tok.contents, strlen(tok.contents)+1);
-    return wrap_in_expr(new_sym);
-  } else if (tok.type==WORD) {
-    char *name = calloc(strlen(tok.contents)+1, sizeof(char));
-    memcpy(name, tok.contents, strlen(tok.contents)+1);
-    i += 2;
-    size_t startpt = i;
-    tok = tokens.tokens[i];
-    size_t arg_count = 0;
-    while (tok.type != RIGHTPAREN) {
-      if (tok.type == WORD) arg_count++;
-      tok = tokens.tokens[++i];
-    }
-    NamedExpr ne = (NamedExpr) {
-      .name = name,
-      .args = calloc(arg_count, sizeof(Expr)),
-      .num_args = arg_count,
-    };
-    i = startpt;
-    tok = tokens.tokens[i];
-    arg_count = 0;
-    while (tok.type != RIGHTPAREN) {
-      if (tok.type == WORD) {
-        ne.args[arg_count] = token_list_to_expr(tokens, i);
-        arg_count++;
-      }
-      tok = tokens.tokens[++i];
-    }
-    return wrap_in_expr(ne);
+Expr token_list_to_expr(TokenList tl, size_t *cursor) {
+  assert(*cursor < tl.len); // A bit of memory protection
+
+  assert(tl.len > 0);
+  if (*cursor == tl.len - 1) {
+    // Cursor points right to the end of the TokenList. If this isn't 
+    // a WORD, then the input must be malformed.
+    assert(tl.tokens[*cursor].type == WORD && "Malformed input");
+    return wrap_in_expr(make_sym(tl.tokens[*cursor].contents));
   }
-  assert(0 && "Unreachable");
+
+  // Due to the two previous assertions, we know that there is at least
+  // one element after the cursor position. So "cursor+1" is a safe index.
+  assert(*cursor < tl.len - 1);
+
+  // What we need to do next depends on the type of the current token
+  switch (tl.tokens[*cursor].type) {
+    case WORD:
+      // The following (cursor+1) is safe due to the previous asserts
+      if (tl.tokens[*cursor+1].type == LEFTPAREN) {
+        // This is a NAMED_EXPR or a FUNCTOR. In either case, it needs a "name".
+        char* name = (char*) make_sym(tl.tokens[*cursor].contents);
+
+        // This is a NAMED_EXPR or a FUNCTOR. Check for the latter by 
+        // scanning for the matching RIGHTPAREN and seeing if a FUNCTOR_EQ is next
+        bool is_functor = false;
+        *cursor += 2; // The cursor now points at the token immediately after the LEFTPAREN
+        int paren_balance = 1;  // The difference between num of LEFTPARENs and RIGHTPARENs
+        size_t i = *cursor;  // Preserve the cursor position, and instead scan a throwaway variable
+        for ( ; i<tl.len; i++) {
+          if (tl.tokens[i].type == LEFTPAREN) paren_balance++;
+          if (tl.tokens[i].type == RIGHTPAREN) paren_balance--;
+          if (paren_balance == 0) break;
+        }
+        // At this point, we have found the matching rightparen and "i" points directly at it
+        i++;
+        if (i != tl.len && tl.tokens[i].type == FUNCTOR_EQ) is_functor = true;
+
+        // At this point the cursor is still pointing at the token just after the LEFTPAREN
+        if (is_functor) {
+          // This is a functor. That means the next thing is a named_expression
+          NamedExpr lhs = {0};
+          assert(tl.tokens[*cursor].type == WORD);
+          lhs.name = (char*)make_sym(tl.tokens[*cursor].contents);
+          (*cursor)++;
+          assert(tl.tokens[*cursor].type == LEFTPAREN);
+          (*cursor)++;
+          lhs.num_args = 0;
+          while (tl.tokens[*cursor].type != RIGHTPAREN) {
+            if (tl.tokens[*cursor].type == WORD) {
+              lhs.num_args++;
+              lhs.args = realloc(lhs.args, lhs.num_args * sizeof(Expr));
+              lhs.args[lhs.num_args-1] = token_list_to_expr(tl, cursor);
+            }
+            (*cursor)++;
+          }
+          *cursor += 2;
+          assert(tl.tokens[*cursor].type == FUNCTOR_EQ);
+
+          (*cursor)++;
+          Expr *rhs_expr = calloc(1, sizeof(Expr));
+          *rhs_expr = token_list_to_expr(tl, cursor);
+
+          Expr *lhs_expr = calloc(1, sizeof(Expr));
+          *lhs_expr = wrap_in_expr(lhs);
+
+          Func result = {
+            .name = name,
+            .head = lhs_expr,
+            .body = rhs_expr,
+          };
+
+          return wrap_in_expr(result);
+        } else {
+          // This is a named expression
+          NamedExpr ne = {0};
+          ne.name = name;
+          ne.num_args = 0;
+          while (tl.tokens[*cursor].type != RIGHTPAREN) {
+            if (tl.tokens[*cursor].type == WORD) {
+              ne.num_args++;
+              ne.args = realloc(ne.args, ne.num_args * sizeof(Expr));
+              ne.args[ne.num_args-1] = token_list_to_expr(tl, cursor);
+            }
+            (*cursor)++;
+          }
+          if (tl.tokens[*cursor].type == RIGHTPAREN) {
+            return wrap_in_expr(ne);
+          }
+        }
+      } else {
+        // This is a simple symbol.
+        // I think this is necessary to allow the recursion to work
+        return wrap_in_expr(make_sym(tl.tokens[*cursor].contents));
+      }
+			break;
+    case LEFTPAREN:
+    case RIGHTPAREN:
+    case COMMA:
+    case FUNCTOR_EQ:
+      assert(0 && "Malformed input?");
+  }
+
+  TODO();
 }
 
 Expr parse_cstring_to_expr(char *input_string) {
   TokenList token_list = parse_input_string(input_string);
-  Expr result = token_list_to_expr(token_list, 0);
+  size_t cursor = 0;
+  Expr result = token_list_to_expr(token_list, &cursor);
   free_tokenlist(&token_list);
   return result;
 }
 
 int main(void) {
+  Expr test = parse_cstring_to_expr("swap(pair(a, b)) => pair(b, a)");
+  // Expr test = parse_cstring_to_expr("pair(a, b)");
+  print_expr(test);
+  return 1;
+
   Func swap_functor = {
     .name = "swap",
     .head = calloc(1, sizeof(Expr)),

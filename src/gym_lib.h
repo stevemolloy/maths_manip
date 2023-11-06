@@ -55,6 +55,8 @@ typedef struct {
   SingleSymMap *map;
 } SymMap;
 
+Sym make_sym(char *name);
+
 SymMap new_sym_map(size_t ini_cap);
 
 int add_sym_to_map(Sym sym, Expr expr, SymMap *map);
