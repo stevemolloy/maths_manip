@@ -9,8 +9,6 @@
 
 #define VERBOSE false
 
-#define TODO() assert(0 && "Not yet implemented\n")
-
 typedef enum {
   WORD,
   LEFTPAREN,
@@ -284,32 +282,22 @@ Expr parse_cstring_to_expr(char *input_string) {
 }
 
 int main(void) {
-  Expr test = parse_cstring_to_expr("swap(pair(a, b)) => pair(b, a)");
-  // Expr test = parse_cstring_to_expr("pair(a, b)");
-  print_expr(test);
-  return 1;
+  // Expr swap_functor = parse_cstring_to_expr("collapse(pair(a, a)) => a");
+  Expr swap_functor = parse_cstring_to_expr("swap(pair(a, b)) => pair(b, a)");
 
-  Func swap_functor = {
-    .name = "swap",
-    .head = calloc(1, sizeof(Expr)),
-    .body = calloc(1, sizeof(Expr)),
-  };
-  swap_functor.head[0] = parse_cstring_to_expr("pair(a, b)");
-  swap_functor.body[0] = parse_cstring_to_expr("pair(b, a)");
-
-  Expr input_expr = parse_cstring_to_expr("pair(x, y)");
+  Expr input_expr = parse_cstring_to_expr("pair(i(s,t(u,v)), g(h,j,k))");
 
   printf("Input to manipulate:    ");
   print_expr(input_expr);
 
   printf("Functor to apply:       ");
-  print_expr(wrap_in_expr(swap_functor));
+  print_expr(swap_functor);
 
   SymMap sym_map = new_sym_map(16);
-  if (match_exprs(input_expr, wrap_in_expr(swap_functor), &sym_map)) {
+  if (match_exprs(input_expr, swap_functor, &sym_map)) {
     printf("=========================================\n");
     printf("Result of application:  ");
-    Expr result = execute_functor(input_expr, *swap_functor.head, *swap_functor.body, sym_map);
+    Expr result = execute_functor(*swap_functor.as.func.body, sym_map);
     print_expr(result);
   } else {
     printf("No match\n");
@@ -317,24 +305,24 @@ int main(void) {
 
   free_sym_map(&sym_map);
 
-  for (size_t i=0; i<swap_functor.head->as.named_expr.num_args; i++) {
-    free(swap_functor.head->as.named_expr.args[i].as.sym);
-  }
-  free(swap_functor.head->as.named_expr.args);
-  free(swap_functor.head->as.named_expr.name);
-  free(swap_functor.head);
-  for (size_t i=0; i<swap_functor.body->as.named_expr.num_args; i++) {
-    free(swap_functor.body->as.named_expr.args[i].as.sym);
-  }
-  free(swap_functor.body->as.named_expr.args);
-  free(swap_functor.body->as.named_expr.name);
-  free(swap_functor.body);
-
-  for (size_t i=0; i<input_expr.as.named_expr.num_args; i++) {
-    free(input_expr.as.named_expr.args[i].as.sym);
-  }
-  free(input_expr.as.named_expr.args);
-  free(input_expr.as.named_expr.name);
+  // for (size_t i=0; i<swap_functor.head->as.named_expr.num_args; i++) {
+  //   free(swap_functor.head->as.named_expr.args[i].as.sym);
+  // }
+  // free(swap_functor.head->as.named_expr.args);
+  // free(swap_functor.head->as.named_expr.name);
+  // free(swap_functor.head);
+  // for (size_t i=0; i<swap_functor.body->as.named_expr.num_args; i++) {
+  //   free(swap_functor.body->as.named_expr.args[i].as.sym);
+  // }
+  // free(swap_functor.body->as.named_expr.args);
+  // free(swap_functor.body->as.named_expr.name);
+  // free(swap_functor.body);
+  //
+  // for (size_t i=0; i<input_expr.as.named_expr.num_args; i++) {
+  //   free(input_expr.as.named_expr.args[i].as.sym);
+  // }
+  // free(input_expr.as.named_expr.args);
+  // free(input_expr.as.named_expr.name);
 
   return 0;
 }

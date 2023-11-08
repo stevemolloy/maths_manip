@@ -95,30 +95,38 @@ void _print_expr(Expr expr, size_t level) {
   if (level==0) printf("\n");
 }
 
-bool match_exprs(Expr test_expr, Expr main_expr, SymMap *sym_map) {
-#if VERBOSE
-  printf("Checking if the following match:\n");
-  printf("\t");
-  print_expr(test_expr);
-  printf("\t");
-  print_expr(main_expr);
-#endif
+bool compare_expressions(Expr a, Expr b) {
+  if (a.type != b.type) return false;
+  switch (a.type) {
+    case SYM:
+      return strcmp(a.as.sym, b.as.sym)==0;
+    case NAMED_EXPR:
+      if (strcmp(a.as.named_expr.name, b.as.named_expr.name)!=0) return false;
+      if (a.as.named_expr.num_args != b.as.named_expr.num_args) return false;
+      for (size_t i=0; i<a.as.named_expr.num_args; i++) {
+        if (!compare_expressions(a.as.named_expr.args[i], b.as.named_expr.args[i])) return false;
+      }
+      return true;
+    case FUNC:
+      if (strcmp(a.as.func.name, b.as.func.name)!=0) return false;
+      if (!compare_expressions(*a.as.func.head, *b.as.func.head)) return false;
+      if (!compare_expressions(*a.as.func.body, *b.as.func.body)) return false;
+      return true;
+  }
+}
 
+bool match_exprs(Expr test_expr, Expr main_expr, SymMap *sym_map) {
   if (main_expr.type == SYM) {
-#if VERBOSE
-    printf("\t\tMatching the test_expr against a SYM\n");
-#endif
-    add_sym_to_map(main_expr.as.sym, test_expr, sym_map);
+    Expr check_expr = {0};
+    if (search_sym_map(*sym_map, main_expr.as.sym, &check_expr) < 0) {
+      add_sym_to_map(main_expr.as.sym, test_expr, sym_map);
+    } else {
+      return compare_expressions(check_expr, test_expr);
+    }
     return true;
   } else if (main_expr.type == FUNC) {
-#if VERBOSE
-    printf("\t\tMatching the test_expr against a FUNC\n");
-#endif
     return match_exprs(test_expr, *main_expr.as.func.head, sym_map);
   } else if (main_expr.type == NAMED_EXPR) {
-#if VERBOSE
-    printf("\t\tMatching the test_expr against a NAMED_EXPR\n");
-#endif
     if (test_expr.type != NAMED_EXPR) return false;
     if (strcmp(test_expr.as.named_expr.name, main_expr.as.named_expr.name) != 0) return false;
     if (test_expr.as.named_expr.num_args != main_expr.as.named_expr.num_args) return false;
@@ -153,24 +161,25 @@ int get_sym_equivalent(Sym sym, Expr f_head, Expr base_expr, Expr *equiv) {
   return 0;
 }
 
-Expr execute_functor(Expr target, Expr f_head, Expr f_body, SymMap sym_map) {
-  if (f_head.type == SYM) {
-    Expr return_value = {0};
-    search_sym_map(sym_map, f_head.as.sym, &return_value);
-    return return_value;
-  } else if (f_head.type == FUNC) {
-    assert(0 && "Isn't this illegal?");
-  } else if (f_head.type == NAMED_EXPR) {
-    for (size_t i=0; i<target.as.named_expr.num_args; i++) {
-      target.as.named_expr.args[i] = execute_functor(
-          f_head.as.named_expr.args[i],
-          f_body.as.named_expr.args[i],
-          target.as.named_expr.args[i],
-          sym_map
-      );
-    }
-    return target;
+Expr execute_functor(Expr func_body, SymMap sym_map) {
+  // Given that we have already confirmed the match between the target and the functor,
+  // we do not actually need the target to be provided.  All we need is the functor body
+  // and the sym_map to provide the translation.
+  // The functor body is provided as an expression to allow for resursion.
+  // In order to avoid mem allocs, I alter func_body and then return it.
+  switch (func_body.type) {
+    case SYM:
+      search_sym_map(sym_map, func_body.as.sym, &func_body);
+      break;
+    case NAMED_EXPR:
+      for (size_t i=0; i<func_body.as.named_expr.num_args; i++) {
+        func_body.as.named_expr.args[i] = execute_functor(func_body.as.named_expr.args[i], sym_map);
+      }
+      break;
+    case FUNC:
+      TODO();
+      break;
   }
-  assert(0 && "Unreachable");
+  return func_body;
 }
 

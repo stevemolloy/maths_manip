@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define TODO() assert(0 && "Not yet implemented\n")
+
 // Types of expressions
 typedef enum {
   SYM,        // Simple symbols
@@ -85,7 +87,7 @@ bool match_exprs(Expr test_expr, Expr main_expr, SymMap *sym_map);
 
 int get_sym_equivalent(Sym sym, Expr f_head, Expr base_expr, Expr *equiv);
 
-Expr execute_functor(Expr target, Expr f_head, Expr f_body, SymMap sym_map);
+Expr execute_functor(Expr func_body, SymMap sym_map);
 
 #endif // !_GYM_LIB_H
 
