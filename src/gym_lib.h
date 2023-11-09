@@ -2,11 +2,31 @@
 #define _GYM_LIB_H
 
 #include <assert.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #define TODO() assert(0 && "Not yet implemented\n")
+
+typedef enum {
+  WORD,
+  LEFTPAREN,
+  RIGHTPAREN,
+  COMMA,
+  FUNCTOR_EQ,
+} TokenType;
+
+typedef struct{
+  TokenType type;
+  char *contents;
+} Token;
+
+typedef struct {
+  size_t len;
+  size_t cap;
+  Token *tokens;
+} TokenList;
 
 // Types of expressions
 typedef enum {
@@ -56,6 +76,22 @@ typedef struct {
   size_t cap;
   SingleSymMap *map;
 } SymMap;
+
+char* tokentype_to_cstring(TokenType tt);
+
+Token new_token(TokenType type, char *contents, size_t len);
+
+TokenList new_token_list(size_t ini_cap);
+
+int add_to_token_list(TokenList *tl, Token token);
+
+void free_tokenlist(TokenList *token_list);
+
+TokenList parse_input_string(char *input_string);
+
+Expr token_list_to_expr(TokenList tl, size_t *cursor);
+
+Expr parse_cstring_to_expr(char *input_string);
 
 Sym make_sym(char *name);
 
