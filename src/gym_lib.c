@@ -94,6 +94,13 @@ TokenList parse_input_string(char *input_string) {
   return token_list;
 }
 
+Sym make_sym(char *name) {
+  size_t len = strlen(name) + 1;
+  Sym result = calloc(len, sizeof(char));
+  memcpy(result, name, len);
+  return result;
+}
+
 Expr token_list_to_expr(TokenList tl, size_t *cursor) {
   assert(*cursor < tl.len); // A bit of memory protection
 
@@ -205,13 +212,6 @@ Expr parse_cstring_to_expr(char *input_string) {
   size_t cursor = 0;
   Expr result = token_list_to_expr(token_list, &cursor);
   free_tokenlist(&token_list);
-  return result;
-}
-
-Sym make_sym(char *name) {
-  size_t len = strlen(name) + 1;
-  Sym result = calloc(len, sizeof(char));
-  memcpy(result, name, len);
   return result;
 }
 

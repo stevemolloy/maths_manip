@@ -77,29 +77,9 @@ typedef struct {
   SingleSymMap *map;
 } SymMap;
 
-char* tokentype_to_cstring(TokenType tt);
-
-Token new_token(TokenType type, char *contents, size_t len);
-
-TokenList new_token_list(size_t ini_cap);
-
-int add_to_token_list(TokenList *tl, Token token);
-
-void free_tokenlist(TokenList *token_list);
-
-TokenList parse_input_string(char *input_string);
-
-Expr token_list_to_expr(TokenList tl, size_t *cursor);
-
 Expr parse_cstring_to_expr(char *input_string);
 
-Sym make_sym(char *name);
-
 SymMap new_sym_map(size_t ini_cap);
-
-int add_sym_to_map(Sym sym, Expr expr, SymMap *map);
-
-int search_sym_map(SymMap map, Sym needle, Expr *return_expr);
 
 void free_sym_map(SymMap *map);
 
