@@ -67,6 +67,8 @@ int search_sym_map(SymMap map, Sym needle, Expr *return_expr);
 
 void free_sym_map(SymMap *map);
 
+void free_expr(Expr *expr);
+
 Expr wrap_sym_in_expr(Sym sym);
 
 Expr wrap_func_in_expr(Func func);

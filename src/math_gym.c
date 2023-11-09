@@ -120,53 +120,6 @@ TokenList parse_input_string(char *input_string) {
   return token_list;
 }
 
-// Expr token_list_to_expr(TokenList tokens, size_t i) {
-//   assert(i < tokens.len);
-//   Token tok = tokens.tokens[i];
-//   if (tok.type==WORD && (i == tokens.len-1 || tokens.tokens[i+1].type != LEFTPAREN)) {
-//     Sym new_sym = calloc(strlen(tok.contents)+1, sizeof(char));
-//     memcpy(new_sym, tok.contents, strlen(tok.contents)+1);
-//     return wrap_in_expr(new_sym);
-//   } else if (tok.type==WORD) {
-//     char *name = calloc(strlen(tok.contents)+1, sizeof(char));
-//     memcpy(name, tok.contents, strlen(tok.contents)+1);
-//     i += 2;
-//     size_t startpt = i;
-//     tok = tokens.tokens[i];
-//     size_t arg_count = 0;
-//     while (tok.type != RIGHTPAREN) {
-//       if (tok.type == WORD) arg_count++;
-//       tok = tokens.tokens[++i];
-//     }
-//     NamedExpr ne = (NamedExpr) {
-//       .name = name,
-//       .args = calloc(arg_count, sizeof(Expr)),
-//       .num_args = arg_count,
-//     };
-//     i = startpt;
-//     tok = tokens.tokens[i];
-//     arg_count = 0;
-//     while (tok.type != RIGHTPAREN) {
-//       if (tok.type == WORD) {
-//         ne.args[arg_count] = token_list_to_expr(tokens, i);
-//         arg_count++;
-//       }
-//       tok = tokens.tokens[++i];
-//     }
-//     if (i == tokens.len - 1)
-//       return wrap_in_expr(ne);
-//     
-//     i++;
-//     assert(tokens.tokens[i].type == FUNCTOR_EQ && 
-//         "Did not find \"=>\" in the expected place");
-//
-//     i++;
-//     Expr rhs = token_list_to_expr(tokens, i);
-//     print_expr(rhs);
-//   }
-//   assert(0 && "Unreachable");
-// }
-
 Expr token_list_to_expr(TokenList tl, size_t *cursor) {
   assert(*cursor < tl.len); // A bit of memory protection
 
@@ -285,7 +238,7 @@ int main(void) {
   // Expr swap_functor = parse_cstring_to_expr("collapse(pair(a, a)) => a");
   Expr swap_functor = parse_cstring_to_expr("swap(pair(a, b)) => pair(b, a)");
 
-  Expr input_expr = parse_cstring_to_expr("pair(i(s,t(u,v)), g(h,j,k))");
+  Expr input_expr = parse_cstring_to_expr("pair(x, y)");
 
   printf("Input to manipulate:    ");
   print_expr(input_expr);
@@ -294,35 +247,22 @@ int main(void) {
   print_expr(swap_functor);
 
   SymMap sym_map = new_sym_map(16);
+  Expr result = {0};
   if (match_exprs(input_expr, swap_functor, &sym_map)) {
     printf("=========================================\n");
     printf("Result of application:  ");
-    Expr result = execute_functor(*swap_functor.as.func.body, sym_map);
+    result = execute_functor(*swap_functor.as.func.body, sym_map);
     print_expr(result);
   } else {
     printf("No match\n");
   }
 
+  // Free allocated memory
+  // TODO: This needs to be done in a more user-friendly way
   free_sym_map(&sym_map);
-
-  // for (size_t i=0; i<swap_functor.head->as.named_expr.num_args; i++) {
-  //   free(swap_functor.head->as.named_expr.args[i].as.sym);
-  // }
-  // free(swap_functor.head->as.named_expr.args);
-  // free(swap_functor.head->as.named_expr.name);
-  // free(swap_functor.head);
-  // for (size_t i=0; i<swap_functor.body->as.named_expr.num_args; i++) {
-  //   free(swap_functor.body->as.named_expr.args[i].as.sym);
-  // }
-  // free(swap_functor.body->as.named_expr.args);
-  // free(swap_functor.body->as.named_expr.name);
-  // free(swap_functor.body);
-  //
-  // for (size_t i=0; i<input_expr.as.named_expr.num_args; i++) {
-  //   free(input_expr.as.named_expr.args[i].as.sym);
-  // }
-  // free(input_expr.as.named_expr.args);
-  // free(input_expr.as.named_expr.name);
+  free_expr(&swap_functor);
+  free(input_expr.as.named_expr.args);
+  free(input_expr.as.named_expr.name);
 
   return 0;
 }

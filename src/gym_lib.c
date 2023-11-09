@@ -32,6 +32,7 @@ int add_sym_to_map(Sym sym, Expr expr, SymMap *map) {
 int search_sym_map(SymMap map, Sym needle, Expr *return_expr) {
   for (size_t i=0; i<map.len; i++) {
     if (strcmp(map.map[i].sym, needle) == 0) {
+      free_expr(return_expr);
       *return_expr = map.map[i].expr;
       return 1;
     }
@@ -41,6 +42,28 @@ int search_sym_map(SymMap map, Sym needle, Expr *return_expr) {
 
 void free_sym_map(SymMap *map) {
   free(map->map);
+}
+
+void free_expr(Expr *expr) {
+  switch (expr->type) {
+    case FUNC:
+      free_expr(expr->as.func.body);
+      free_expr(expr->as.func.head);
+      free(expr->as.func.body);
+      free(expr->as.func.head);
+      free(expr->as.func.name);
+      break;
+    case SYM:
+      free(expr->as.sym);
+      break;
+    case NAMED_EXPR:
+      for (size_t i=0; i<expr->as.named_expr.num_args; i++) {
+        free_expr(&expr->as.named_expr.args[i]);
+      }
+      free(expr->as.named_expr.args);
+      free(expr->as.named_expr.name);
+      break;
+  }
 }
 
 Expr wrap_sym_in_expr(Sym sym) {
@@ -136,29 +159,6 @@ bool match_exprs(Expr test_expr, Expr main_expr, SymMap *sym_map) {
     }
   }
   return true;
-}
-
-int get_sym_equivalent(Sym sym, Expr f_head, Expr base_expr, Expr *equiv) {
-  // e.g. sym=a, f_head=pair(a, b), base_expr=pair(x, y).
-  // Should set equiv to x and return 1
-  if (f_head.type == SYM) {
-    if (sym == f_head.as.sym) {
-      *equiv = base_expr;
-      return 1;
-    }
-  } else if (f_head.type == FUNC) {
-    assert(0 && "Isn't this illegal?");
-  } else if (f_head.type == NAMED_EXPR) {
-    for (size_t i=0; i<f_head.as.named_expr.num_args; i++) {
-      Expr head_arg = f_head.as.named_expr.args[i];
-      Expr base_arg = base_expr.as.named_expr.args[i];
-      if (get_sym_equivalent(sym, head_arg, base_arg, equiv) == 1) return 1;
-    }
-  } else {
-    assert(0 && "Unreachable");
-  }
-
-  return 0;
 }
 
 Expr execute_functor(Expr func_body, SymMap sym_map) {
