@@ -1,15 +1,70 @@
 #include <assert.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <readline/readline.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "gym_lib.h"
 
-int main(void) {
-  // Expr swap_functor = parse_cstring_to_expr("collapse(pair(a, a)) => a");
-  Expr swap_functor = parse_cstring_to_expr("swap(pair(a, b)) => pair(b, a)");
+#define FUNCLIST_CAP 256
 
-  Expr input_expr = parse_cstring_to_expr("pair(x, y)");
+#define SM_add_to_array(arr, val)                                                      \
+  do {                                                                                 \
+       if ((arr)->length >= (arr)->capacity) {                                         \
+         (arr)->capacity *= 2;                                                         \
+         (arr)->data = realloc((arr)->data, (arr)->capacity * sizeof((arr)->data[0])); \
+         if ((arr)->data == NULL) {                                                    \
+            fprintf(stderr, "Could not allocate memory to extend the array.");    \
+            exit(1);                                                                   \
+         }                                                                             \
+       }                                                                               \
+       (arr)->data[(arr)->length++] = val;                                             \
+  } while (0)
+
+#define SM_free(arr) free((arr).data)
+
+typedef struct {
+  size_t length;
+  size_t capacity;
+  Func *definitions;
+} FunctorList;
+
+typedef struct {
+  FunctorList functors;
+  Expr expr;
+} AppState;
+
+FunctorList new_functorlist(size_t capacity) {
+  FunctorList fl = {
+    .length = 0,
+    .capacity = capacity,
+    .definitions = calloc(capacity, sizeof(Func)),
+  };
+  return fl;
+}
+
+int main(void) {
+  AppState state = {
+    .functors = new_functorlist(FUNCLIST_CAP)
+  };
+
+  // bool should_quit = false;
+  char *line_read = NULL;
+
+  // while (!should_quit) {
+  line_read = readline ("Give an expression to manipulate: ");
+  Expr input_expr = parse_cstring_to_expr(line_read);
+  line_read = NULL;
+
+  line_read = readline ("Give a functor to apply: ");
+  Expr swap_functor = parse_cstring_to_expr(line_read);
+
+  //   if (strcmp(line_read, "quit")==0 || strcmp(line_read, "exit")==0) {
+  //     should_quit = true;
+  //   }
+  // }
 
   printf("Input to manipulate:    ");
   print_expr(input_expr);
