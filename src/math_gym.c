@@ -54,12 +54,14 @@ int main(void) {
   char *line_read = NULL;
 
   // while (!should_quit) {
-  line_read = readline ("Give an expression to manipulate: ");
-  Expr input_expr = parse_cstring_to_expr(line_read);
+  line_read = readline("Give an expression to manipulate: ");
+  state.expr = parse_cstring_to_expr(line_read);
   line_read = NULL;
 
-  line_read = readline ("Give a functor to apply: ");
+  line_read = readline("Give a functor to apply: ");
   Expr swap_functor = parse_cstring_to_expr(line_read);
+
+  printf("\n");
 
   //   if (strcmp(line_read, "quit")==0 || strcmp(line_read, "exit")==0) {
   //     should_quit = true;
@@ -67,14 +69,14 @@ int main(void) {
   // }
 
   printf("Input to manipulate:    ");
-  print_expr(input_expr);
+  print_expr(state.expr);
 
   printf("Functor to apply:       ");
   print_expr(swap_functor);
 
   SymMap sym_map = new_sym_map(16);
   Expr result = {0};
-  if (match_exprs(input_expr, swap_functor, &sym_map)) {
+  if (match_exprs(state.expr, swap_functor, &sym_map)) {
     printf("=========================================\n");
     printf("Result of application:  ");
     result = execute_functor(*swap_functor.as.func.body, sym_map);
@@ -87,8 +89,8 @@ int main(void) {
   // TODO: This needs to be done in a more user-friendly way
   free_sym_map(&sym_map);
   free_expr(&swap_functor);
-  free(input_expr.as.named_expr.args);
-  free(input_expr.as.named_expr.name);
+  free(state.expr.as.named_expr.args);
+  free(state.expr.as.named_expr.name);
 
   return 0;
 }
