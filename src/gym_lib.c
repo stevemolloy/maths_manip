@@ -71,7 +71,7 @@ TokenList parse_input_string(char *input_string) {
     else if (isalpha(*cursor)) {
       char *token_cursor = cursor;
       size_t len = 0;
-      while (isalpha(*token_cursor) != 0) {
+      while (isalnum(*token_cursor) != 0 || *token_cursor=='_') {
         len++;
         token_cursor++;
       }
