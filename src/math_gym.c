@@ -50,47 +50,44 @@ int main(void) {
     .functors = new_functorlist(FUNCLIST_CAP)
   };
 
-  // bool should_quit = false;
   char *line_read = NULL;
 
-  // while (!should_quit) {
   line_read = readline("Give an expression to manipulate: ");
+  // For example -- square(sum(pair(x, y)))
   state.expr = parse_cstring_to_expr(line_read);
   line_read = NULL;
-
-  line_read = readline("Give a functor to apply: ");
-  Expr swap_functor = parse_cstring_to_expr(line_read);
-
-  printf("\n");
-
-  //   if (strcmp(line_read, "quit")==0 || strcmp(line_read, "exit")==0) {
-  //     should_quit = true;
-  //   }
-  // }
-
-  printf("Input to manipulate:    ");
-  print_expr(state.expr);
-
-  printf("Functor to apply:       ");
-  print_expr(swap_functor);
-
-  SymMap sym_map = new_sym_map(16);
-  Expr result = {0};
-  if (match_exprs(state.expr, swap_functor, &sym_map)) {
-    printf("=========================================\n");
-    printf("Result of application:  ");
-    result = execute_functor(*swap_functor.as.func.body, sym_map);
-    print_expr(result);
-  } else {
-    printf("No match\n");
+  
+  while (true) {
+    printf("Input to manipulate:    ");
+    print_expr(state.expr);
+  
+    line_read = readline("Give a functor to apply: ");
+    Expr swap_functor = parse_cstring_to_expr(line_read);
+    //  For example --  mult_out(square(sum(pair(a, b)))) => mul(sum(pair(a,b)), sum(pair(a,b)))
+  
+    printf("\n");
+  
+    if (strcmp(line_read, "quit")==0 || strcmp(line_read, "exit")==0) {
+      break;
+    }
+  
+    printf("Functor to apply:       ");
+    print_expr(swap_functor);
+  
+    SymMap sym_map = new_sym_map(16);
+    if (match_exprs(state.expr, swap_functor, &sym_map)) {
+      state.expr = execute_functor(*swap_functor.as.func.body, sym_map);
+    } else {
+      printf("No match\n");
+    }
   }
 
   // Free allocated memory
   // TODO: This needs to be done in a more user-friendly way
-  free_sym_map(&sym_map);
-  free_expr(&swap_functor);
-  free(state.expr.as.named_expr.args);
-  free(state.expr.as.named_expr.name);
+  // free_sym_map(&sym_map);
+  // free_expr(&swap_functor);
+  // free(state.expr.as.named_expr.args);
+  // free(state.expr.as.named_expr.name);
 
   return 0;
 }
